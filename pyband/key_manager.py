@@ -41,11 +41,13 @@ class KeyManager(object):
         return self.sk.vk_s.hex()
 
     def get_addr(self):
-        addr_hex = hashlib.sha256(self.sk.vk_s).hexdigest()[:40]
-        return get_addr_from_hex(addr_hex)
+        return hashlib.sha256(self.sk.vk_s).hexdigest()[:40]
+
+    def get_iban_addr(self):
+        return get_addr_from_hex(self.get_addr())
 
     def sign(self, data):
         if isinstance(data, str):
             data = bytes.fromhex(data)
 
-        return (data + self.sk.sign(data)).hex()
+        return self.sk.sign(data).hex()

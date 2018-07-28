@@ -1,6 +1,8 @@
 import ed25519
 import hashlib
 
+from .varint import varint_encode
+
 
 BASE_32_LOOKUP = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
@@ -46,8 +48,8 @@ class KeyManager(object):
     def get_iban_addr(self):
         return get_addr_from_hex(self.get_addr())
 
-    def sign(self, data):
+    def sign(self, nonce, data):
         if isinstance(data, str):
             data = bytes.fromhex(data)
 
-        return self.sk.sign(data).hex()
+        return self.sk.sign(varint_encode(nonce) + data).hex()

@@ -3,6 +3,7 @@ import json
 import requests
 
 from .varint import varint_encode, varint_decode
+from .key_manager import KeyManager
 
 
 class Void(object):
@@ -88,7 +89,7 @@ class Function(object):
         self.params = params
         self.result = result
 
-    def dry(self, *args):
+    def raw_tx(self, *args):
         if len(self.params) != len(args):
             raise ValueError(
                 "Invalid number of arguments to {}".format(self.name))
@@ -100,14 +101,23 @@ class Function(object):
         return tx_data
 
     def __call__(self, *args):
+        if len(args) >= 2 and isinstance (args[0], KeyManager) and isinstance (args[1], int):
+            tx_data = bytes.fromhex(args[0].sign(args[1], self.raw_tx(*args[2:])))
+        else:
+            tx_data = self.raw_tx(*args)
+
+        # TODO:
+        timestamp = varint_encode(10)
+
         response = requests.post(self.endpoint, data=json.dumps({
             'jsonrpc': '2.0',
             'id': 'PYBAND',
             'method': 'broadcast_tx_commit',
             'params': {
-                'tx': base64.b64encode(self.drycall(args)).decode('utf-8')
+                'tx': base64.b64encode(timestamp + tx_data).decode('utf-8')
             }
         })).json()
+
         return response
 
 

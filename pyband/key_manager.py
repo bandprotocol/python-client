@@ -51,5 +51,7 @@ class KeyManager(object):
     def sign(self, nonce, data):
         if isinstance(data, str):
             data = bytes.fromhex(data)
+        data = varint_encode(nonce) + data
 
-        return self.sk.sign(varint_encode(nonce) + data).hex()
+        return (
+            self.get_addr() + '01' + self.sk.sign(data).hex() + data.hex())

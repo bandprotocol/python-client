@@ -82,8 +82,8 @@ IDENT_LOOKUP = {
 
 
 class Function(object):
-    def __init__(self, endpoint, name, addr, opcode, params, result):
-        self.endpoint = endpoint
+    def __init__(self, config, name, addr, opcode, params, result):
+        self.config = config
         self.name = name
         self.tx_prefix = addr + IDENT_LOOKUP['uint16_t'].dump(opcode)
         self.params = params
@@ -101,15 +101,19 @@ class Function(object):
         return tx_data
 
     def __call__(self, *args):
-        if len(args) >= 2 and isinstance (args[0], KeyManager) and isinstance (args[1], int):
-            tx_data = bytes.fromhex(args[0].sign(args[1], self.raw_tx(*args[2:])))
+        if (len(args) >= 2 and
+                isinstance(args[0], KeyManager) and
+                isinstance(args[1], int)):
+
+            tx_data = bytes.fromhex(
+                args[0].sign(args[1], self.raw_tx(*args[2:])))
         else:
             tx_data = self.raw_tx(*args)
 
         # TODO:
         timestamp = varint_encode(10)
 
-        response = requests.post(self.endpoint, data=json.dumps({
+        response = requests.post(self.config.endpoint, data=json.dumps({
             'jsonrpc': '2.0',
             'id': 'PYBAND',
             'method': 'broadcast_tx_commit',
@@ -122,8 +126,8 @@ class Function(object):
 
 
 class Contract(object):
-    def __init__(self, endpoint, name, addr, abi_contract):
-        self.endpoint = endpoint
+    def __init__(self, config, name, addr, abi_contract):
+        self.config = config
         self.name = name
         self.addr = IDENT_LOOKUP['Address'].dump(addr)
         self.abi_contract = abi_contract
@@ -132,18 +136,29 @@ class Contract(object):
         if attr not in self.abi_contract:
             raise KeyError("Invalid method {}.{}".format(self.name, attr))
         return Function(
-            self.endpoint, self.name + '.' + attr, self.addr,
+            self.config, self.name + '.' + attr, self.addr,
             **self.abi_contract[attr])
 
 
+class ContractCreator(object):
+    def __init__(self, config, name, abi_contract):
+        self.config = config
+        self.name = name
+        self.abi_contract = abi_contract
+
+    def __call__(self, addr):
+        return Contract(self.config, self.name, addr, self.abi_contract)
+
+    def constructor(self):
+        return "HELLO {} {}".format(self.name, self.abi_contract)
+
+
 class Blockchain(object):
-    def __init__(self, endpoint, abi):
-        self.endpoint = endpoint
+    def __init__(self, config, abi):
+        self.config = config
         self.abi = abi
 
     def __getattr__(self, attr):
-        def wrap(addr):
-            if attr not in self.abi:
-                raise KeyError("Invalid contract {}".format(attr))
-            return Contract(self.endpoint, attr, addr, self.abi[attr])
-        return wrap
+        if attr not in self.abi:
+            raise KeyError("Invalid contract {}".format(attr))
+        return ContractCreator(self.config, attr, self.abi[attr])

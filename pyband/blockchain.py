@@ -143,7 +143,10 @@ class Function(object):
                 'data': (timestamp + tx_data).hex()
             }
         })).json()
-
+        
+        error_info = response['result']['response'].get('info', '')
+        if error_info != '':
+            return error_info
         return IDENT_LOOKUP[self.result].parse(base64.b64decode(response['result']['response'].get('value', '')))
 
     

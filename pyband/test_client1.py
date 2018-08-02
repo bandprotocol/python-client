@@ -26,11 +26,11 @@ vote = client.blockchain.Voting(voting_id)
 tcr_id = creator.create(client.blockchain.Registry.constructor(ct_id, voting_id))
 tcr = client.blockchain.Registry(tcr_id)
 
-token.mint(client.key,0,1000)
-ct_token.buy(client.key,1, 500)
-vote.request_voting_power(client.key, 2, 100)
+token.mint(client.key, 1, 1000)
+ct_token.buy(client.key, 2, 500)
+vote.request_voting_power(client.key, 3, 100)
 
-tcr.apply(client.key, 3, "Swit will come back to Thai!!!!", 120)
+tcr.apply(client.key, 4, "Swit will come back to Thai!!!!", 120)
 
 # client 2 challenge
 clock.set_time(10)
@@ -38,23 +38,23 @@ clock.set_time(10)
 addr2 = creator.create(client2.blockchain.Account.constructor(client2.key.get_vk()))
 account2 = client.blockchain.Account(addr2)
 
-token.mint(client2.key, 0, 700)
-ct_token.buy(client2.key, 1, 500)
-tcr.challenge(client2.key,2, 1, "He won't come back.")
+token.mint(client2.key, 1, 700)
+ct_token.buy(client2.key, 2, 500)
+tcr.challenge(client2.key, 3, 1, "He won't come back.")
 
 # no one vote
 clock.set_time(220)
-tcr.update_status(client2.key, 3, 1)
+tcr.update_status(client2.key, 4, 1)
 
 # New apply
 clock.set_time(300)
-tcr.apply(client.key, 4, "Swit loves kfc too much.", 200)
+tcr.apply(client.key, 5, "Swit loves kfc too much.", 200)
 
 clock.set_time(401)
-tcr.update_status(client.key, 5, 2)
+tcr.update_status(client.key, 6, 2)
 
 clock.set_time(420)
-tcr.challenge(client2.key,4, 2, "He loves Mcdonald more.")
+tcr.challenge(client2.key, 5, 2, "He loves Mcdonald more.")
 
 # Create 3 voter
 clock.set_time(450)
@@ -72,109 +72,101 @@ av3 = voter3.blockchain.Account(addrv3)
 addrv4 = creator.create(voter4.blockchain.Account.constructor(voter4.key.get_vk()))
 av4 = voter4.blockchain.Account(addrv4)
 
-ct_token.mint(voter1.key,0, 1000)
-ct_token.mint(voter2.key,0, 1000)
-ct_token.mint(voter3.key,0, 1000)
-ct_token.mint(voter4.key,0, 1000)
+ct_token.mint(voter1.key, 1, 1000)
+ct_token.mint(voter2.key, 1, 1000)
+ct_token.mint(voter3.key, 1, 1000)
+ct_token.mint(voter4.key, 1, 1000)
 
-vote.request_voting_power(voter1.key,1, 700)
-vote.request_voting_power(voter2.key,1, 400)
-vote.request_voting_power(voter3.key,1, 400)
-vote.request_voting_power(voter4.key,1, 200)
+vote.request_voting_power(voter1.key, 2, 700)
+vote.request_voting_power(voter2.key, 2, 400)
+vote.request_voting_power(voter3.key, 2, 400)
+vote.request_voting_power(voter4.key, 2, 200)
 
-vote.commit_vote(voter1.key, 2, 2, hashlib.sha256(b'\x00'+ varint_encode(79)).digest(), 700)
-vote.commit_vote(voter2.key, 2, 2, hashlib.sha256(b'\x01'+ varint_encode(434)).digest(), 400)
-vote.commit_vote(voter3.key, 2, 2, hashlib.sha256(b'\x01'+ varint_encode(178)).digest(), 400)
+vote.commit_vote(voter1.key, 3, 2, hashlib.sha256(b'\x00' + varint_encode(79)).digest(), 700)
+vote.commit_vote(voter2.key, 3, 2, hashlib.sha256(b'\x01' + varint_encode(434)).digest(), 400)
+vote.commit_vote(voter3.key, 3, 2, hashlib.sha256(b'\x01' + varint_encode(178)).digest(), 400)
 
 clock.set_time(550)
-vote.commit_vote(voter4.key, 2, 2, hashlib.sha256(b'\x00'+ varint_encode(999)).digest(), 200)
-vote.reveal_vote(voter1.key, 3, 2, False, 79)
+vote.commit_vote(voter4.key, 3, 2, hashlib.sha256(b'\x00' + varint_encode(999)).digest(), 200)
+vote.reveal_vote(voter1.key, 4, 2, False, 79)
 
 clock.set_time(600)
-vote.reveal_vote(voter2.key, 3, 2, True, 434)
-vote.reveal_vote(voter3.key, 3, 2, True, 178)
+vote.reveal_vote(voter2.key, 4, 2, True, 434)
+vote.reveal_vote(voter3.key, 4, 2, True, 178)
 
 clock.set_time(630)
-tcr.update_status(client.key, 6, 2)
+tcr.update_status(client.key, 7, 2)
 
 ct_token.balance(addrv2)
-tcr.claim_reward(voter2.key, 4, 2, 434)
+tcr.claim_reward(voter2.key, 5, 2, 434)
 ct_token.balance(addrv2)
 
 ct_token.balance(addrv3)
-tcr.claim_reward(voter3.key, 4, 2, 178)
+tcr.claim_reward(voter3.key, 5, 2, 178)
 ct_token.balance(addrv3)
 
-vote.withdraw_voting_power(voter1.key, 4, 678)
+vote.withdraw_voting_power(voter1.key, 5, 678)
 
 # Deposit and withdraw stake on list
 ct_token.balance(addr)
-tcr.withdraw(client.key, 7, 2, 150)
+tcr.withdraw(client.key, 8, 2, 150)
 ct_token.balance(addr)
 
 ct_token.balance(addr)
-tcr.deposit(client.key, 8, 2, 200)
+tcr.deposit(client.key, 9, 2, 200)
 ct_token.balance(addr)
 
 # New list and challenge
 clock.set_time(700)
-tcr.apply(client2.key, 5, "I don't want to know story about Swit.", 300)
+tcr.apply(client2.key, 6, "I don't want to know story about Swit.", 300)
 
 clock.set_time(750)
-tcr.withdraw(client.key, 9, 2, 50)
-tcr.challenge(client.key, 10, 3, "Swit is a famous person, everyone want to know everything about him!!")
+tcr.withdraw(client.key, 10, 2, 50)
+tcr.challenge(client.key, 11, 3, "Swit is a famous person, everyone want to know everything about him!!")
 
-vote.request_voting_power(voter1.key, 5, 378)
+vote.request_voting_power(voter1.key, 6, 378)
 
 clock.set_time(800)
-vote.commit_vote(voter1.key, 6, 3, hashlib.sha256(b'\x01'+ varint_encode(1476)).digest(), 400)
-vote.commit_vote(voter2.key, 5, 3, hashlib.sha256(b'\x01'+ varint_encode(5810)).digest(), 400)
-vote.commit_vote(voter3.key, 5, 3, hashlib.sha256(b'\x00'+ varint_encode(7223)).digest(), 400)
-vote.commit_vote(voter4.key, 2, 3, hashlib.sha256(b'\x00'+ varint_encode(9875)).digest(), 200)
+vote.commit_vote(voter1.key, 7, 3, hashlib.sha256(b'\x01' + varint_encode(1476)).digest(), 400)
+vote.commit_vote(voter2.key, 6, 3, hashlib.sha256(b'\x01' + varint_encode(5810)).digest(), 400)
+vote.commit_vote(voter3.key, 6, 3, hashlib.sha256(b'\x00' + varint_encode(7223)).digest(), 400)
+vote.commit_vote(voter4.key, 3, 3, hashlib.sha256(b'\x00' + varint_encode(9875)).digest(), 200)
 
-# voter 2 forget to reveal so bad :(
 clock.set_time(900)
-vote.reveal_vote(voter1.key, 7, 3, True, 1476)
-vote.reveal_vote(voter3.key, 6, 3, False, 7223)
-vote.reveal_vote(voter4.key, 3, 3, False, 9875)
+vote.reveal_vote(voter1.key, 8, 3, True, 1476)
+vote.reveal_vote(voter3.key, 7, 3, False, 7223)
+vote.reveal_vote(voter4.key, 4, 3, False, 9875)
 
 # voter 1 want token can withdraw because reveal vote already
 clock.set_time(914)
-vote.withdraw_voting_power(voter1.key, 8, 300)
+vote.withdraw_voting_power(voter1.key, 9, 300)
 
 # too late!
 clock.set_time(951)
-vote.reveal_vote(voter2.key, 6, 3, True, 5810)
+vote.reveal_vote(voter2.key, 7, 3, True, 5810)
 
-# addr1 update status want to beat challenge (remove list)
-tcr.update_status(client.key, 11, 3)
+# addr1 update status want to beat challenge(remove list)
+tcr.update_status(client.key, 12, 3)
 
-ct_token.balance(addr)
-# 150
+ct_token.balance(addr)# 150
 
 # Voter 2 want to withdraw vote
-vote.withdraw_voting_power(voter2.key, 6, 300)
+vote.withdraw_voting_power(voter2.key, 7, 300)
 
-vote.rescue_token(voter2.key, 6, 3)
+vote.rescue_token(voter2.key, 7, 3)
 
 # Voter 2 can withdraw now
-vote.withdraw_voting_power(voter2.key, 7, 400)
+vote.withdraw_voting_power(voter2.key, 8, 400)
 
 # voter 3 and 4 claim reward
-ct_token.balance(addrv3)
-# 625
-tcr.claim_reward(voter3.key, 7, 3, 7223)
-ct_token.balance(addrv3)
-# 658
+ct_token.balance(addrv3)# 625
+tcr.claim_reward(voter3.key, 8, 3, 7223)
+ct_token.balance(addrv3)# 658
 
-ct_token.balance(addrv4)
-# 800
-tcr.claim_reward(voter4.key, 4, 3, 9875)
-ct_token.balance(addrv4)
-# 817
+ct_token.balance(addrv4)# 800
+tcr.claim_reward(voter4.key, 5, 3, 9875)
+ct_token.balance(addrv4)# 817
 
-ct_token.balance(addr)
-# 150
-tcr.exit(client.key, 12, 2)
-ct_token.balance(addr)
-# 400
+ct_token.balance(addr)# 150
+tcr.exit(client.key, 13, 2)
+ct_token.balance(addr)# 400

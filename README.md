@@ -46,7 +46,7 @@ Contract view can declare like this
 Replace <<Contract type> and <Address of contract> with type of contract eg. Creator, Account. and hex address string.
 
 Almost transaction need to send keymanager of sender used in sign message and nonce to garuntee not duplicate transaction.
-## Creater
+## Creator
 Contract to create other contract has only 1 function create. If contract creating success, it will return address of new contract.
 ```python
 >>> creator = client.blockchain.Creator('0' * 40)

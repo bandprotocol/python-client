@@ -67,6 +67,7 @@ View of voting contract have function to request vote power, commit vote, reveal
 
 #### Registry
 View of REgistry contract have function to apply application, challenge application, reward claim for winning voter, etc.
+
 ABI
 ---
 Interface of every transaction that you can send to chain store in pyband/abi.py file

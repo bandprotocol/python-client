@@ -22,11 +22,19 @@ class Buffer(object):
     def parse(self, data):
         return data
 
+
 class String(object):
     def dump(self, value):
         return varint_encode(len(value)) + value.encode()
+
     def parse(self, data):
-        return data
+        start_string = 0
+        for idx, toread in enumerate(list(data)):
+            if not (toread & 0x80):
+                start_string = idx+1
+                break
+        return data[start_string:].decode()
+
 
 class UnsignedInteger(object):
     def __init__(self, precision_bit, casting=int):
@@ -109,8 +117,9 @@ class Function(object):
         return tx_data
 
     def broadcast_msg(self, *args):
-        if len(args) >= 2 and isinstance (args[0], KeyManager) and isinstance (args[1], int):
-            tx_data = bytes.fromhex(args[0].sign(args[1], self.raw_tx(*args[2:])))
+        if len(args) >= 2 and isinstance(args[0], KeyManager) and isinstance(args[1], int):
+            tx_data = bytes.fromhex(args[0].sign(
+                args[1], self.raw_tx(*args[2:])))
         else:
             tx_data = self.raw_tx(*args)
 
@@ -143,20 +152,19 @@ class Function(object):
                 'data': (timestamp + tx_data).hex()
             }
         })).json()
-        
+
         error_info = response['result']['response'].get('info', '')
         if error_info != '':
             return error_info
         return IDENT_LOOKUP[self.result].parse(base64.b64decode(response['result']['response'].get('value', '')))
 
-    
     def __call__(self, *args):
         if (self.type == "action"):
             return self.broadcast_msg(*args)
         else:
             return self.query_msg(*args)
 
-        
+
 class Contract(object):
     def __init__(self, config, name, addr, abi_contract):
         self.config = config
@@ -171,6 +179,7 @@ class Contract(object):
             self.config, self.name + '.' + attr, self.addr,
             **self.abi_contract[attr])
 
+
 class ContractCreator(object):
     def __init__(self, config, name, abi_contract):
         self.config = config
@@ -183,8 +192,10 @@ class ContractCreator(object):
     def constructor(self, *args):
         tx_data = b''
         for idx in range(len(args)):
-               tx_data += IDENT_LOOKUP[self.abi_contract['constructor_params'][idx]].dump(args[idx])
+            tx_data += IDENT_LOOKUP[self.abi_contract['constructor_params']
+                                    [idx]].dump(args[idx])
         return varint_encode(self.abi_contract['id']) + tx_data
+
 
 class Blockchain(object):
     def __init__(self, config, abi):

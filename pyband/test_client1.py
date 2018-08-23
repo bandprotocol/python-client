@@ -1,15 +1,17 @@
 from pyband import BandProtocolClient
 from pyband.config import Config, MockClock
 from pyband.varint import varint_encode, varint_decode
-from pyband.abi import abi
+import requests
 import base64
+import json
 import hashlib
+
 
 clock = MockClock(0)
 
-client = BandProtocolClient(Config('http://localhost:26657/', clock), abi,
+client = BandProtocolClient(Config('http://localhost:26657/', clock),
                             'e480f19604b0e44a0b65b67315c97ffac223a4e85c764a6890ac05e3047fb93878e3d3647baadde0b9e92c3bb2eca1b8b8944cf263c5ef38a7d489f8a64baedd')
-client2 = BandProtocolClient(Config('http://localhost:26657/', clock), abi,
+client2 = BandProtocolClient(Config('http://localhost:26657/', clock),
                              '5e44d24cb81f599fbaac9d0817290aa810beac244af95f163837fedd68749633fb6fc5062d71cb56d1dff269ffb050b962c1e346b44f8eccecb673e7f88553e4')
 
 # 480564be72759f7d5b017f09817e2a87135e07ec
@@ -24,7 +26,7 @@ account = client.blockchain.Account(addr)
 #     'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', bytes.fromhex('06080702')))
 ct_id = creator.create(client.blockchain.Token.constructor(
     'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', bytes.fromhex('06040807efabbd8ea1e8bb040704')))
-    
+
 ct_token = client.blockchain.Token(ct_id)
 
 voting_id = creator.create(client.blockchain.Voting.constructor(ct_id))
@@ -81,13 +83,13 @@ tcr.challenge(client2.key, 15, 2, "He loves Mcdonald more.")
 
 # Create 3 voter
 clock.set_time(450)
-voter1 = BandProtocolClient(Config('http://localhost:26657/', clock), abi,
+voter1 = BandProtocolClient(Config('http://localhost:26657/', clock),
                             '7a54dc810f0a5889da9f32620c675375d63bdfebb20ac6a6669c7ed48da2c516e19d33b8365584aef2bf9a54f2d7cfbd025cc94b536dc1da04f5f05a0ceca652')
-voter2 = BandProtocolClient(Config('http://localhost:26657/', clock), abi,
+voter2 = BandProtocolClient(Config('http://localhost:26657/', clock),
                             '065fb538352b432443c0f509a7c462e903a324120d41bf972799eeec9ec37058a00e155d681fc36325b2148bf54b43841104353470fefd921f18b1b27c89cd42')
-voter3 = BandProtocolClient(Config('http://localhost:26657/', clock), abi,
+voter3 = BandProtocolClient(Config('http://localhost:26657/', clock),
                             'a5a51a0974bb2fbea0abfc68d14b9ef226f8ed2eaa98c293d173e40e221e8eabe3b7d02e3ef94c0e3d47fef2a90ba51150abd47dd34876758b5267ce265fc1b0')
-voter4 = BandProtocolClient(Config('http://localhost:26657/', clock), abi,
+voter4 = BandProtocolClient(Config('http://localhost:26657/', clock),
                             '124d043b9e8f757764bec574a2e24532663c83fadf4c9c681f9dec64521712d34a31eeee9abbbbee78f0b7cd21136b66f6e17d00c0c20e76db7d352ca188d3fc')
 
 addrv1 = creator.create(
@@ -214,7 +216,12 @@ ct_token.balance(addr)  # 400
 
 import threading
 import time
+
+
 def f():
     time.sleep(1)
     print('hey')
-for i in range(10): threading.Thread(target=f).start()
+
+
+for i in range(10):
+    threading.Thread(target=f).start()

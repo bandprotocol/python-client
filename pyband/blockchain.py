@@ -198,9 +198,21 @@ class ContractCreator(object):
 
 
 class Blockchain(object):
-    def __init__(self, config, abi):
+    abi = None
+
+    def __init__(self, config):
+        if Blockchain.abi is None:
+            response = requests.post(config.endpoint, data=json.dumps({
+                'jsonrpc': '2.0',
+                'id': 'PYBAND',
+                'method': 'abci_query',
+                'params': {
+                    'path': 'abi'
+                }
+            })).json()
+            Blockchain.abi = json.loads(base64.b64decode(
+                response['result']['response'].get('value', '')).decode("utf-8"))
         self.config = config
-        self.abi = abi
 
     def __getattr__(self, attr):
         if attr not in self.abi:

@@ -12,6 +12,7 @@ client = BandProtocolClient(Config('http://localhost:26657/', clock), abi,
 client2 = BandProtocolClient(Config('http://localhost:26657/', clock), abi,
                              '5e44d24cb81f599fbaac9d0817290aa810beac244af95f163837fedd68749633fb6fc5062d71cb56d1dff269ffb050b962c1e346b44f8eccecb673e7f88553e4')
 
+# 480564be72759f7d5b017f09817e2a87135e07ec
 creator = client.blockchain.Creator('0' * 40)
 token = client.blockchain.Token('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')
 
@@ -19,15 +20,23 @@ addr = creator.create(
     client.blockchain.Account.constructor(client.key.get_vk()))
 account = client.blockchain.Account(addr)
 
+# ct_id = creator.create(client.blockchain.Token.constructor(
+#     'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', bytes.fromhex('06080702')))
 ct_id = creator.create(client.blockchain.Token.constructor(
-    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', bytes.fromhex('06080702')))
+    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', bytes.fromhex('06040807efabbd8ea1e8bb040704')))
+    
 ct_token = client.blockchain.Token(ct_id)
 
 voting_id = creator.create(client.blockchain.Voting.constructor(ct_id))
 vote = client.blockchain.Voting(voting_id)
 
+gvn_id = creator.create(client.blockchain.Governance.constructor(
+    ct_id, voting_id, 30, 70, 1000, 100, 100))
+gvn = client.blockchain.Governance(gvn_id)
+# gvn_id = '7777777777777777777777777777777777777777'
+
 tcr_id = creator.create(client.blockchain.Registry.constructor(
-    ct_id, voting_id, 50, 50, 100, 100, 100, 100))
+    ct_id, voting_id, gvn_id, 50, 50, 100, 100, 100, 100))
 tcr = client.blockchain.Registry(tcr_id)
 
 token.mint(client.key, 1, 550000)
@@ -47,10 +56,18 @@ account2 = client.blockchain.Account(addr2)
 token.mint(client2.key, 1, 1000000)
 ct_token.buy(client2.key, 2, 500)
 tcr.challenge(client2.key, 3, 1, "He won't come back.")
+vote.request_voting_power(client2.key, 4, 1)
+
+clock.set_time(20)
+vote.commit_vote(client2.key, 5, 1, hashlib.sha256(
+    b'\x00' + varint_encode(79)).digest(), 1)
+
+clock.set_time(150)
+vote.reveal_vote(client2.key, 6, 1, False, 79)
 
 # no one vote
 clock.set_time(220)
-tcr.update_status(client2.key, 4, 1)
+tcr.update_status(client2.key, 14, 1)
 
 # New apply
 clock.set_time(300)
@@ -60,7 +77,7 @@ clock.set_time(401)
 tcr.update_status(client.key, 6, 2)
 
 clock.set_time(420)
-tcr.challenge(client2.key, 5, 2, "He loves Mcdonald more.")
+tcr.challenge(client2.key, 15, 2, "He loves Mcdonald more.")
 
 # Create 3 voter
 clock.set_time(450)
@@ -136,7 +153,7 @@ ct_token.balance(addr)
 
 # New list and challenge
 clock.set_time(700)
-tcr.apply(client2.key, 6, "I don't want to know story about Swit.", 300)
+tcr.apply(client2.key, 16, "I don't want to know story about Swit.", 300)
 
 clock.set_time(750)
 tcr.withdraw(client.key, 10, 2, 50)
@@ -193,3 +210,11 @@ ct_token.balance(addrv4)  # 817
 ct_token.balance(addr)  # 150
 tcr.exit(client.key, 13, 2)
 ct_token.balance(addr)  # 400
+
+
+import threading
+import time
+def f():
+    time.sleep(1)
+    print('hey')
+for i in range(10): threading.Thread(target=f).start()

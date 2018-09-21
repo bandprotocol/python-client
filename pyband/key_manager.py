@@ -33,11 +33,12 @@ def get_addr_from_hex(addr_hex):
 
 
 class KeyManager(object):
-    def __init__(self, key):
+    def __init__(self, key, username):
         if isinstance(key, str):
             key = bytes.fromhex(key)
 
         self.sk = ed25519.SigningKey(key)
+        self.username = username
 
     def get_vk(self):
         return self.sk.vk_s.hex()
@@ -53,5 +54,4 @@ class KeyManager(object):
             data = bytes.fromhex(data)
         data = varint_encode(nonce) + data
 
-        return (
-            self.get_addr() + '01' + self.sk.sign(data).hex() + data.hex())
+        return self.sk.sign(data).hex()

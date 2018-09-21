@@ -1,5 +1,5 @@
 from pyband import BandProtocolClient
-from pyband.config import Config, MockClock
+from pyband.config import Config, MockClock, RealClock
 from pyband.varint import varint_encode, varint_decode
 import requests
 import base64
@@ -7,13 +7,16 @@ import json
 import hashlib
 
 
-clock = MockClock(0)
+# clock = MockClock(0)
 
-client = BandProtocolClient(Config('http://localhost:26657/', clock),
-                            'e480f19604b0e44a0b65b67315c97ffac223a4e85c764a6890ac05e3047fb93878e3d3647baadde0b9e92c3bb2eca1b8b8944cf263c5ef38a7d489f8a64baedd')
-client2 = BandProtocolClient(Config('http://localhost:26657/', clock),
-                             '5e44d24cb81f599fbaac9d0817290aa810beac244af95f163837fedd68749633fb6fc5062d71cb56d1dff269ffb050b962c1e346b44f8eccecb673e7f88553e4')
+# client = BandProtocolClient(Config('http://localhost:26657/', clock),
+#                             'e480f19604b0e44a0b65b67315c97ffac223a4e85c764a6890ac05e3047fb93878e3d3647baadde0b9e92c3bb2eca1b8b8944cf263c5ef38a7d489f8a64baedd')
+# client2 = BandProtocolClient(Config('http://localhost:26657/', clock),
+#                              '5e44d24cb81f599fbaac9d0817290aa810beac244af95f163837fedd68749633fb6fc5062d71cb56d1dff269ffb050b962c1e346b44f8eccecb673e7f88553e4')
 
+clock = RealClock()
+client = BandProtocolClient(Config('http://localhost:26657/', clock), 'e480f19604b0e44a0b65b67315c97ffac223a4e85c764a6890ac05e3047fb93878e3d3647baadde0b9e92c3bb2eca1b8b8944cf263c5ef38a7d489f8a64baedd', 'bandgod')
+client.blockchain.MintToken(key=client.key, token='band', value=20)
 # 480564be72759f7d5b017f09817e2a87135e07ec
 creator = client.blockchain.Creator('0' * 40)
 token = client.blockchain.Token('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')

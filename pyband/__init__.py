@@ -6,6 +6,6 @@ import base64
 
 
 class BandProtocolClient(object):
-    def __init__(self, config, key):
+    def __init__(self, config, key, username):
         self.blockchain = Blockchain(config)
-        self.key = KeyManager(key)
+        self.key = KeyManager(key, username)

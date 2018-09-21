@@ -2,29 +2,34 @@ import base64
 import json
 import requests
 import time
+import string
 
 from .varint import varint_encode, varint_decode
 from .key_manager import KeyManager
 
 
-class Void(object):
-    def dump(self, value):
-        return b''
-
-    def parse(self, data):
-        return None
-
-
-class Buffer(object):
-    def dump(self, value):
-        return value
-
-    def parse(self, data):
-        return data
-
-
 class String(object):
+    def __init__(self, name, max_length, is_sensitive):
+        self.name = name
+        self.max_length = max_length
+        self.is_sensitive = is_sensitive
+
     def dump(self, value):
+        if len(value) > self.max_length:
+            raise Exception(
+                "<{}> String's length ({}) exceeds max_length ({})".format(
+                    self.name, len(value), self.max_length))
+
+        if not all(c in string.printable for c in value):
+            raise Exception(
+                "<{}>There are unprintable characters in string".format(
+                    self.name))
+
+        if not self.is_sensitive and not value.islower():
+            raise Exception(
+                "<{}>There are upper characters in Insensitive case".format(
+                    self.name))
+
         return varint_encode(len(value)) + value.encode()
 
     def parse(self, data):
@@ -79,9 +84,11 @@ class Bytes(object):
 
         return data[:self.length].hex()
 
+
 class Equation(object):
     def __init__(self):
-        self.prcd = {'+' : 2, '-' : 2, '*' : 4, '/' : 4, '%' : 4, '^': 6, '(' : 1, ')' : 1, '#': 1 }
+        self.prcd = {'+': 2, '-': 2, '*': 4, '/': 4, '%': 4, '^': 6,
+                     '(': 1, ')': 1, '#': 1}
 
     def tokenized(self, str):
         token = []
@@ -149,7 +156,6 @@ class Equation(object):
         number = bytearray()
         in_progress = False
         for byte in data:
-            print (byte)
             if in_progress:
                 number += bytes([byte])
                 if not (byte & 0x80):
@@ -168,7 +174,7 @@ class Equation(object):
                     tokens.append('/')
                 elif byte == 0x05:
                     tokens.append('%')
-                elif byte ==     0x06:
+                elif byte == 0x06:
                     tokens.append('^')
                 elif byte == 0x07:
                     in_progress = True
@@ -199,11 +205,9 @@ class Equation(object):
 
     def parse(self, data):
         prefix = self.bytes_to_prefix(data)
-        print (prefix)
         return self.prefix_to_infix(prefix)
 
 IDENT_LOOKUP = {
-    'void': Void(),
     'bool': UnsignedInteger(1, bool),
     'uint8_t': UnsignedInteger(8),
     'uint16_t': UnsignedInteger(16),
@@ -213,111 +217,62 @@ IDENT_LOOKUP = {
     'Address': Bytes('Address', 20),
     'Hash': Bytes('Hash', 32),
     'Signature': Bytes('Signature', 64),
-    'Buffer': Buffer(),
-    'String': String(),
-    'Equation': Equation()
+    'Ident': String('Ident', 20, False),
+    'NodeID': String('NodeID', 128, True),
+    'Curve': Equation(),
 }
 
 
-class Function(object):
-    def __init__(self, config, name, addr, opcode, params, result, type):
+class Message(object):
+    def __init__(self, config, name, abi_msg):
         self.config = config
         self.name = name
-        self.tx_prefix = addr + IDENT_LOOKUP['uint16_t'].dump(opcode)
-        self.params = params
-        self.result = result
-        self.type = type
+        self.abi_msg = abi_msg
 
-    def raw_tx(self, *args):
-        if len(self.params) != len(args):
-            raise ValueError(
-                'Invalid number of arguments to {}'.format(self.name))
-
-        tx_data = self.tx_prefix
-        for idx in range(len(args)):
-            tx_data += IDENT_LOOKUP[self.params[idx]].dump(args[idx])
-
-        return tx_data
-
-    def broadcast_msg(self, *args):
-        if len(args) >= 2 and isinstance(args[0], KeyManager) and isinstance(args[1], int):
-            tx_data = bytes.fromhex(args[0].sign(
-                args[1], self.raw_tx(*args[2:])))
+    def __call__(self, *args, **kwargs):
+        if args:
+            if len(args) != 1 or not isinstance(args[0], dict):
+                raise Exception(
+                    "Message argument must be dictionary or keyword arguments")
+            input_arg = args[0]
         else:
-            tx_data = self.raw_tx(*args)
+            input_arg = kwargs
 
-        # TODO:
-        timestamp = varint_encode(self.config.clock.get_time())
+        raw_tx = varint_encode(self.abi_msg['ID'])
+        for arg in self.abi_msg['Input']:
+            arg_name, arg_type = arg.split(':')
+            if arg_name not in input_arg:
+                raise Exception("({}) not found".format(arg_name))
+            raw_tx += IDENT_LOOKUP[arg_type].dump(input_arg[arg_name])
+
+        timestamp = self.config.clock.get_time()
+        key = input_arg['key']
+        tx = IDENT_LOOKUP['Ident'].dump(key.username)
+        tx += bytes.fromhex(key.sign(timestamp, raw_tx))
+        tx += varint_encode(timestamp) + raw_tx
 
         response = requests.post(self.config.endpoint, data=json.dumps({
             'jsonrpc': '2.0',
             'id': 'PYBAND',
             'method': 'broadcast_tx_commit',
             'params': {
-                'tx': base64.b64encode(timestamp + tx_data).decode('utf-8')
+                'tx': base64.b64encode(tx).decode('utf-8')
             }
         })).json()
 
         error_info = response['result']['deliver_tx'].get('info', '')
         if error_info != '':
             return error_info
-        return IDENT_LOOKUP[self.result].parse(base64.b64decode(response['result']['deliver_tx'].get('data', '')))
+        result = base64.b64decode(
+            response['result']['deliver_tx'].get('data', ''))
 
-    def query_msg(self, *args):
-        tx_data = self.raw_tx(*args)
-        timestamp = varint_encode(self.config.clock.get_time())
+        return result
 
-        response = requests.post(self.config.endpoint, data=json.dumps({
-            'jsonrpc': '2.0',
-            'id': 'PYBAND',
-            'method': 'abci_query',
-            'params': {
-                'data': (timestamp + tx_data).hex()
-            }
-        })).json()
-
-        error_info = response['result']['response'].get('info', '')
-        if error_info != '':
-            return error_info
-        return IDENT_LOOKUP[self.result].parse(base64.b64decode(response['result']['response'].get('value', '')))
-
-    def __call__(self, *args):
-        if (self.type == 'action'):
-            return self.broadcast_msg(*args)
-        else:
-            return self.query_msg(*args)
-
-
-class Contract(object):
-    def __init__(self, config, name, addr, abi_contract):
-        self.config = config
-        self.name = name
-        self.addr = IDENT_LOOKUP['Address'].dump(addr)
-        self.abi_contract = abi_contract
-
-    def __getattr__(self, attr):
-        if attr not in self.abi_contract:
-            raise KeyError('Invalid method {}.{}'.format(self.name, attr))
-        return Function(
-            self.config, self.name + '.' + attr, self.addr,
-            **self.abi_contract[attr])
-
-
-class ContractCreator(object):
-    def __init__(self, config, name, abi_contract):
-        self.config = config
-        self.name = name
-        self.abi_contract = abi_contract
-
-    def __call__(self, addr):
-        return Contract(self.config, self.name, addr, self.abi_contract)
-
-    def constructor(self, *args):
-        tx_data = b''
-        for idx in range(len(args)):
-            tx_data += IDENT_LOOKUP[self.abi_contract['constructor_params']
-                                    [idx]].dump(args[idx])
-        return varint_encode(self.abi_contract['id']) + tx_data
+        # for arg in self.abi_msg['Output']:
+        #     arg_name, arg_type = arg.split(':')
+        #     output[arg_name] = IDENT_LOOKUP[arg_type].parse(result[])
+        # return IDENT_LOOKUP[self.result].parse(base64.b64decode(
+        #     response['result']['deliver_tx'].get('data', '')))
 
 
 class Blockchain(object):
@@ -334,10 +289,11 @@ class Blockchain(object):
                 }
             })).json()
             Blockchain.abi = json.loads(base64.b64decode(
-                response['result']['response'].get('value', '')).decode('utf-8'))
+                response['result']['response'].get('value', '')
+            ).decode('utf-8'))
         self.config = config
 
     def __getattr__(self, attr):
         if attr not in self.abi:
-            raise KeyError('Invalid contract {}'.format(attr))
-        return ContractCreator(self.config, attr, self.abi[attr])
+            raise KeyError('Invalid message {}'.format(attr))
+        return Message(self.config, attr, self.abi[attr])

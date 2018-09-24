@@ -16,5 +16,5 @@ def varint_decode(data):
     for idx, toread in enumerate(list(data)):
         value |= (toread & 0x7F) << (7 * idx)
         if not (toread & 0x80):
-            return value
+            return value, data[idx+1:]
     raise ValueError("Unable to parse {} to unsigned integer".format(data))

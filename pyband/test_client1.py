@@ -16,7 +16,8 @@ import hashlib
 
 clock = RealClock()
 client = BandProtocolClient(Config('http://localhost:26657/', clock), 'e480f19604b0e44a0b65b67315c97ffac223a4e85c764a6890ac05e3047fb93878e3d3647baadde0b9e92c3bb2eca1b8b8944cf263c5ef38a7d489f8a64baedd', 'bandgod')
-client.blockchain.MintToken(key=client.key, token='band', value=20)
+client.MintToken(token='band', value=20)
+client.BuyToken(token='band', value=20)
 # 480564be72759f7d5b017f09817e2a87135e07ec
 creator = client.blockchain.Creator('0' * 40)
 token = client.blockchain.Token('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')

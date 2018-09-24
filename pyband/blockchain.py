@@ -1,3 +1,4 @@
+from .key_manager import KeyManager
 import base64
 import json
 import requests
@@ -33,12 +34,8 @@ class String(object):
         return varint_encode(len(value)) + value.encode()
 
     def parse(self, data):
-        start_string = 0
-        for idx, toread in enumerate(list(data)):
-            if not (toread & 0x80):
-                start_string = idx+1
-                break
-        return data[start_string:].decode()
+        size, byte_left = varint_decode(data)
+        return byte_left[:size].decode(), byte_left[size:]
 
 
 class UnsignedInteger(object):
@@ -57,10 +54,10 @@ class UnsignedInteger(object):
         return varint_encode(value)
 
     def parse(self, data):
-        value = varint_decode(data)
+        value, byte_left = varint_decode(data)
         if value >= self.max_value:
             raise ValueError('Invalid unsigned integer range')
-        return self.casting(value)
+        return self.casting(value), byte_left
 
 
 class Bytes(object):
@@ -82,7 +79,7 @@ class Bytes(object):
             raise ValueError(
                 'Unable to parse {} to {}. Too short'.format(self.name, data))
 
-        return data[:self.length].hex()
+        return data[:self.length].hex(), data[self.length:]
 
 
 class Equation(object):
@@ -204,8 +201,8 @@ class Equation(object):
         return data
 
     def parse(self, data):
-        prefix = self.bytes_to_prefix(data)
-        return self.prefix_to_infix(prefix)
+        # Not support parsing equation
+        raise Exception("Parsing equation from blockchain isn't supported")
 
 IDENT_LOOKUP = {
     'bool': UnsignedInteger(1, bool),
@@ -224,9 +221,10 @@ IDENT_LOOKUP = {
 
 
 class Message(object):
-    def __init__(self, config, name, abi_msg):
+    def __init__(self, config, name, key, abi_msg):
         self.config = config
         self.name = name
+        self.key = key
         self.abi_msg = abi_msg
 
     def __call__(self, *args, **kwargs):
@@ -246,9 +244,8 @@ class Message(object):
             raw_tx += IDENT_LOOKUP[arg_type].dump(input_arg[arg_name])
 
         timestamp = self.config.clock.get_time()
-        key = input_arg['key']
-        tx = IDENT_LOOKUP['Ident'].dump(key.username)
-        tx += bytes.fromhex(key.sign(timestamp, raw_tx))
+        tx = IDENT_LOOKUP['Ident'].dump(self.key.username)
+        tx += bytes.fromhex(self.key.sign(timestamp, raw_tx))
         tx += varint_encode(timestamp) + raw_tx
 
         response = requests.post(self.config.endpoint, data=json.dumps({
@@ -266,20 +263,24 @@ class Message(object):
         result = base64.b64decode(
             response['result']['deliver_tx'].get('data', ''))
 
-        return result
+        output = {}
+        for arg in self.abi_msg['Output']:
+            arg_name, arg_type = arg.split(':')
+            output[arg_name], result = IDENT_LOOKUP[arg_type].parse(result)
 
-        # for arg in self.abi_msg['Output']:
-        #     arg_name, arg_type = arg.split(':')
-        #     output[arg_name] = IDENT_LOOKUP[arg_type].parse(result[])
-        # return IDENT_LOOKUP[self.result].parse(base64.b64decode(
-        #     response['result']['deliver_tx'].get('data', '')))
+        if result:
+            raise Exception(
+                "There are some data left in buffer, Something might be wrong")
+
+        return output
 
 
-class Blockchain(object):
+class BandProtocolClient(object):
     abi = None
 
-    def __init__(self, config):
-        if Blockchain.abi is None:
+    def __init__(self, config, key, username):
+        self.key = KeyManager(key, username)
+        if BandProtocolClient.abi is None:
             response = requests.post(config.endpoint, data=json.dumps({
                 'jsonrpc': '2.0',
                 'id': 'PYBAND',
@@ -288,7 +289,7 @@ class Blockchain(object):
                     'path': 'abi'
                 }
             })).json()
-            Blockchain.abi = json.loads(base64.b64decode(
+            BandProtocolClient.abi = json.loads(base64.b64decode(
                 response['result']['response'].get('value', '')
             ).decode('utf-8'))
         self.config = config
@@ -296,4 +297,4 @@ class Blockchain(object):
     def __getattr__(self, attr):
         if attr not in self.abi:
             raise KeyError('Invalid message {}'.format(attr))
-        return Message(self.config, attr, self.abi[attr])
+        return Message(self.config, attr, self.key, self.abi[attr])
